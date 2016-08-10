@@ -119,6 +119,8 @@ body {
   padding: 8px;
 }
 
+
+
 div#notebook {
   overflow: visible;
   border-top: none;
@@ -137,6 +139,7 @@ div#notebook {
     display: block;
     page-break-inside: avoid; 
   }
+  div.box{display:inline-block; padding-left=100px}
 }
 </style>
 
@@ -268,14 +271,29 @@ div#notebook {
 </div>
 </div>
 
-<div class="output_html rendered_html output_subarea output_execute_result">
+<div class="box">
 
         <iframe
-            width="980"
-            height="530"
+            width="620"
+            height="580"
             src="sankey_aid_data_2016.html"
+            align="left"
+            frameborder="0"
+            style="padding:20px;"
+            allowfullscreen
+        ></iframe>
+        
+</div>
+
+<div class="box">
+
+        <iframe
+            width="620"
+            height="580"
+            src="sankey_aid_data_nep_2016.html"
             align="right"
             frameborder="0"
+            style="padding:20px;"
             allowfullscreen
         ></iframe>
         
@@ -286,10 +304,14 @@ div#notebook {
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered">
+</div>
+
+<div class="cell border-box-sizing text_cell rendered">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+
 <h3 id="B.-How-Nepal-receives-Aid.">B. How Nepal receives Aid.<a class="anchor-link" href="#B.-How-Nepal-receives-Aid.">&#182;</a></h3><p>The <strong>top 10 sectors</strong> for which Nepal was committed funding from it's <strong>top 20 donors</strong> (as measured in millions USD). Just for comparison, I threw in Sri Lanka as well (given both share comparable recent political history, population size, geo-political stresses).</p>
 
 </div>
@@ -298,18 +320,6 @@ div#notebook {
 
 
 
-<div class="output_html rendered_html output_subarea output_execute_result">
-
-        <iframe
-            width="930"
-            height="520"
-            src="sankey_aid_data_nep_2016.html"
-            align="right"
-            frameborder="0"
-            allowfullscreen
-        ></iframe>
-        
-</div>
 
 
 <div class="cell border-box-sizing text_cell rendered">
@@ -323,6 +333,7 @@ div#notebook {
 </div>
 </div>
 </div>
+
 <div class="cell border-box-sizing text_cell rendered">
 <div class="prompt input_prompt">
 </div>
@@ -354,18 +365,7 @@ div#notebook {
 
 
 
-<div class="output_html rendered_html output_subarea output_execute_result">
 
-        <iframe
-            width="850"
-            height="540"
-            src="treemap_dis_pc.html"
-            align="right"
-            frameborder="0"
-            allowfullscreen
-        ></iframe>
-        
-</div>
 
 </div>
 
@@ -412,19 +412,30 @@ div#notebook {
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
 
-
-
-<div class="output_html rendered_html output_subarea output_execute_result">
+<div class="box">
 
         <iframe
-            width="820"
-            height="530"
+            width="620"
+            height="580"
+            src="treemap_dis_pc.html"
+            align="left"
+            frameborder="0"
+            style="padding:35px;"
+            allowfullscreen
+        ></iframe>
+        
+</div>
+
+<div class="box">
+
+        <iframe
+            width="620"
+            height="580"
             src="treemap_com_dis.html"
             align="right"
             frameborder="0"
+            style="padding:0px;"
             allowfullscreen
         ></iframe>
         
