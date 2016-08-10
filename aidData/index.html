@@ -206,7 +206,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="About-this-analysis">About this analysis<a class="anchor-link" href="#About-this-analysis">&#182;</a></h3><p>I downloaded the AIDData 2.1 and 3.0 from <a href="http://aiddata.org/country-level-research-datasets">here</a>. It essentially tracks International Development Finance, i.e. who gave how much aid to who and for what. Parts of the data is questionable (as is to be expected from what I assume is a consolidation from disparate sources, some even paper-based). I was primarily interested in the following:</p>
+<h3 id="About-this-analysis">About this analysis<a class="anchor-link" href="#About-this-analysis">&#182;</a></h3><p>I downloaded the AIDData 2.1 and 3.0 from <a href="http://aiddata.org/country-level-research-datasets">here</a>. The dataset essentially tracks International Development Finance, i.e. who gave how much aid to who and for what. Parts of the data are questionable (as is to be expected from what I assume is a consolidation from disparate sources, some even paper-based). I was primarily interested in the following:</p>
 <ul>
 <li><strong>The flow of money from donors to recipient countries</strong></li>
 <li><strong>The percent of the committed money that actually gets disbursed (this was a big issue with the aid that committed to Nepal for Earthquake reconstruction)</strong></li>
@@ -223,7 +223,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="About-the-data">About the data<a class="anchor-link" href="#About-the-data">&#182;</a></h3><p>AidData appears to be a pretty comprehensive repository of aid finance [It is not my domain so I am not sure if there are better sources]. Version 2.1 appears to have data from 1947-2012 while 3.0 appears to have 2013 data as well. Version 3.0 appears to be a research release version (I took that to mean beta). The fields are similar in both versions. It tracks 67 variables associated with development finance projects as it pertains to 96 donors (countries and organizations like UN, etc.). The fields that I ended up using were:</p>
+<h3 id="About-the-data">About the data<a class="anchor-link" href="#About-the-data">&#182;</a></h3><p>AidData appears to be a pretty comprehensive repository of aid finance [It is not my domain so I am not sure if there are better sources]. Version 2.1 appears to have data from 1947-2012 while 3.0 appears to have 2013 data as well. Version 3.0 appears to be a research release version (I took that to mean beta). The fields are similar in both versions. It tracks 67 variables associated with development finance projects as it pertains to 96 donors (countries like the U.S., organizations like U.N., etc.). The fields that I ended up using were:</p>
 <ul>
 <li>disbursed amount</li>
 <li>committed amount</li>
@@ -258,8 +258,8 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Pictured above is the results for AidData3.0. The values are in USD constant (adjusted for inflation). Although I am not too confident on 3.0's data quality, it appears as if World Bank (IBRD and IDA) have stepped up their funding considerably in 2013 (when I compare it to a similar graph for 2.0).</p>
-<p>It's insightful as to how for a country like <strong>Japan</strong>, Energy and Transportation are top funding priorities while for the <strong>U.S.</strong>, it is Health, Government and Budget.</p>
+<p>Pictured below (<strong>Figure 1</strong>) is the results for AidData3.0. The values are in USD constant (adjusted for inflation). Although I am not too confident on 3.0's data quality, it appears as if World Bank (IBRD and IDA) have stepped up their funding considerably in 2013 (when I compare it to a similar graph for 2.0).</p>
+<p>I found it insightful that for a country like <strong>Japan</strong>, Energy and Transportation are top funding priorities while for the <strong>U.S.</strong>, it is Health [and Government and Budget if you go by 2.0 data].</p>
 
 </div>
 </div>
@@ -271,29 +271,29 @@ div#notebook {
 </div>
 </div>
 
-<div class="box">
+
+<div class="box" style="float:left;margin-left:20px;display:inline-block;">
 
         <iframe
-            width="620"
-            height="580"
+            width="600px"
+            height="550px"
             src="sankey_aid_data_2016.html"
-            align="left"
+            float="left"
             frameborder="0"
             style="padding:20px;"
+            style="display:inline"
             allowfullscreen
         ></iframe>
         
-</div>
 
-<div class="box">
 
         <iframe
-            width="620"
-            height="580"
+            width="640"
+            height="570"
             src="sankey_aid_data_nep_2016.html"
-            align="right"
             frameborder="0"
             style="padding:20px;"
+            style="display:inline"
             allowfullscreen
         ></iframe>
         
@@ -302,8 +302,6 @@ div#notebook {
 </div>
 
 </div>
-</div>
-<div class="cell border-box-sizing text_cell rendered">
 </div>
 
 <div class="cell border-box-sizing text_cell rendered">
@@ -327,7 +325,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>The graph above is for AidData3.0. Perhaps the fact that SriLanka (smaller country than Nepal, and by many counts, more developed) was committed more aid has something to do with the 2004 Tsunami (just speculating wildly here).</p>
+<p>The graph above (<strong>Figure 2</strong>) is for AidData3.0. Perhaps the fact that SriLanka (smaller country than Nepal, and by many counts, more developed) was committed more aid has something to do with the 2004 Tsunami (just speculating wildly here).</p>
 <p>Japan seems to value Transporation a lot. I would have thought health, education, etc. would be the largest sectors, but turns out Transporation, Energy, Agriculture actually are.</p>
 
 </div>
@@ -339,7 +337,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="C.-Measuring-inefficiency-and-corruption:-The-difference-between-disbursed-amount-and-project-cost">C. Measuring inefficiency and corruption: The difference between disbursed amount and project cost<a class="anchor-link" href="#C.-Measuring-inefficiency-and-corruption:-The-difference-between-disbursed-amount-and-project-cost">&#182;</a></h3><p>I used aid disbursed as a proxy for received money (as received amount was of poor quality), and total project cost as the money that went into the project. To capture the percent of the disbursed amount that ends up not being used for the project, I used:</p>
+<h3 id="C.-Measuring-inefficiency-and-corruption:-The-difference-between-disbursed-amount-and-project-cost">C. Measuring inefficiency and corruption: The difference between disbursed amount and project cost<a class="anchor-link" href="#C.-Measuring-inefficiency-and-corruption:-The-difference-between-disbursed-amount-and-project-cost">&#182;</a></h3><p>I used aid disbursed as a proxy for received money (as data for received amount was of poor quality), and total project cost as the money that went into the project. To capture the percent of the disbursed amount that ends up not being used for the project, I used:</p>
 <p>$\hspace{40 mm}{\text{inefficiency}= \big|\,{1-\big(\frac{\text{project cost}}{\text{disbursed amount}}}\big)\,\big|}$</p>
 <p>The major reasons I can imagine -again, my own ignorance probably- for the disbursed amount not matching up to the project cost are:</p>
 <ul>
@@ -347,7 +345,7 @@ div#notebook {
 <li>donor did not disburse all of the money but the project went ahead anyway i.e. donor corruption </li>
 <li>project ended up costing way more than intended i.e. inefficiency</li>
 </ul>
-<p>I used the <strong>average inefficiency</strong> metric for countries with <strong>at least 3</strong> <em>qualifying</em> projects to calculate a list of the 10 most inefficient receivers to come up with the following tree-map. Clicking on recipients shows the donors associated. Color gradient shows inefficiency metric between the donor and recipient with darker being higher.</p>
+<p>I used the <strong>average inefficiency</strong> metric for countries with <strong>at least 3</strong> <em>qualifying</em> projects to calculate a list of the 10 most inefficient receivers to come up with the following tree-map (<strong>Figure 3</strong>). Clicking on recipients shows the donors associated. Color gradient shows inefficiency metric between the donor and recipient with darker being higher.</p>
 
 </div>
 </div>
@@ -362,10 +360,6 @@ div#notebook {
 
 <div class="output_wrapper">
 <div class="output">
-
-
-
-
 
 </div>
 
@@ -392,7 +386,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="C.-Measuring-failure-to-execute:-The-difference-between-committed-amount-and-disbursed-amount">D. Measuring failure to execute: The difference between committed amount and disbursed amount<a class="anchor-link" href="#C.-Measuring-failure-to-execute:-The-difference-between-committed-amount-and-disbursed-amount">&#182;</a></h3><p>Often, aid gets committed but not disbursed. Few reasons I can think of :</p>
+<h3 id="D.-Measuring-failure-to-execute:-The-difference-between-committed-amount-and-disbursed-amount">D. Measuring failure to execute: The difference between committed amount and disbursed amount<a class="anchor-link" href="#D.-Measuring-failure-to-execute:-The-difference-between-committed-amount-and-disbursed-amount">&#182;</a></h3><p>Often, aid gets committed but not disbursed. Few reasons I can think of :</p>
 <ul>
 <li>The donor is using aid as a political bargaining chip and won't release it until conditions are met.</li>
 <li>The reciever doesn't have their sh*t together (aka Nepal post-2015 earthquake).</li>
@@ -413,27 +407,25 @@ div#notebook {
 </div>
 
 
-<div class="box">
+<div class="box" style="float:left;margin-left:20px;display:inline-block;">
 
         <iframe
             width="620"
             height="580"
             src="treemap_dis_pc.html"
-            align="left"
+            float="left"
             frameborder="0"
-            style="padding:35px;"
+            style="padding:10px;"
+            style="display:inline"
             allowfullscreen
         ></iframe>
         
-</div>
 
-<div class="box">
 
         <iframe
             width="620"
-            height="580"
+            height="530"
             src="treemap_com_dis.html"
-            align="right"
             frameborder="0"
             style="padding:0px;"
             allowfullscreen
@@ -463,11 +455,15 @@ div#notebook {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Other notes">Other notes</h3>
-<br>
+<font color = "gray">
+
 <ol>
 <li>I did a host of basic processing to clean the data (e.g. for sector Primary and secondary education were converted to "Education" etc, nulls converted to zeros, both large and small values removed, etc. - the usual).</li>
 <li>*Obviously, we could have used received or disbursed amount but version 3.0 of the data doesn't seem to have that, and the quality of received amount is questionable in version 2.1).</li>
+<li>The folks at AidData seem pretty adamant that any use of their work be cited. So here it is: <font size=1>Tierney, Michael J., Daniel L. Nielson, Darren G. Hawkins, J. Timmons Roberts, Michael G. Findley, Ryan M. Powers, Bradley Parks, Sven E. Wilson, and Robert L. Hicks. 2011. More Dollars than Sense: Refining Our Knowledge of Development Finance Using AidData. World Development 39 (11): 1891-1906</font>. </li>
+<li> Code with poor documentation for how I generated the graphs etc can be found in my <a href="https://github.com/sumangiri/dataviz_sideprojects">github</a> where this site is hosted as well.</li>
 </ol>
+</font>
 </div>
 </div>
 </div>
