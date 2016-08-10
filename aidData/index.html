@@ -193,7 +193,6 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<font color='red'> Note: If you are using FireFox or Chrome, it might try to block the Sankey diagrams (Yes, I imported them as IFrames. I am not a web-developer). Make sure you click the ⓘ button next to where the web-address is and allow permission (/disable protection)</font>
 
 <h1 id="Quick-analysis-on-Aid-Data">Quick analysis on Aid Data<a class="anchor-link" href="#Quick-analysis-on-Aid-Data">&#182;</a></h1>
 </div>
@@ -263,18 +262,404 @@ div#notebook {
 
 
 
-<div class="output_html rendered_html output_subarea output_execute_result">
+<style>
+#body {
+height: 35px;
+margin-left: 40px;
+}
+.node rect {
+cursor: move;
+fill-opacity: .9;
+shape-rendering: crispEdges;
+}
+.node text {
+font: 12px serif;
+pointer-events: none;
+text-shadow: 0 1px 0 #fff;
+}
+.link {
+fill: none;
+stroke: #000;
+stroke-opacity: .2;
+}
+.link:hover {
+stroke-opacity: .5;
+}
+</style>
 
-        <iframe
-            width="800"
-            height="550"
-            src="sankey_aid_data_2016.html?lineheight=0&display=block&scroll=False"
-            frameborder="0"
-            align="right"
-            allowfullscreen
-        ></iframe>
-        
-</div>
+<p id="body" style="margin-left: 40px"></p>
+
+<script src=http://d3js.org/d3.v3.min.js></script>
+ <script>
+d3.sankey = function() {
+var sankey = {},
+nodeWidth = 24,
+nodePadding = 8,
+size = [1, 1],
+nodes = [],
+links = [];
+
+sankey.nodeWidth = function(_) {
+if (!arguments.length) return nodeWidth;
+nodeWidth = +_;
+return sankey;
+};
+
+sankey.nodePadding = function(_) {
+if (!arguments.length) return nodePadding;
+nodePadding = +_;
+return sankey;
+};
+
+sankey.nodes = function(_) {
+if (!arguments.length) return nodes;
+nodes = _;
+return sankey;
+};
+
+sankey.links = function(_) {
+if (!arguments.length) return links;
+links = _;
+return sankey;
+};
+
+sankey.size = function(_) {
+if (!arguments.length) return size;
+size = _;
+return sankey;
+};
+
+sankey.layout = function(iterations) {
+computeNodeLinks();
+computeNodeValues();
+computeNodeBreadths();
+computeNodeDepths(iterations);
+computeLinkDepths();
+return sankey;
+};
+
+sankey.relayout = function() {
+computeLinkDepths();
+return sankey;
+};
+
+sankey.link = function() {
+var curvature = .5;
+
+function link(d) {
+var x0 = d.source.x + d.source.dx,
+x1 = d.target.x,
+xi = d3.interpolateNumber(x0, x1),
+x2 = xi(curvature),
+x3 = xi(1 - curvature),
+y0 = d.source.y + d.sy + d.dy / 2,
+y1 = d.target.y + d.ty + d.dy / 2;
+return "M" + x0 + "," + y0
++ "C" + x2 + "," + y0
++ " " + x3 + "," + y1
++ " " + x1 + "," + y1;
+}
+
+link.curvature = function(_) {
+if (!arguments.length) return curvature;
+curvature = +_;
+return link;
+};
+
+return link;
+};
+
+// Populate the sourceLinks and targetLinks for each node.
+// Also, if the source and target are not objects, assume they are indices.
+function computeNodeLinks() {
+nodes.forEach(function(node) {
+node.sourceLinks = [];
+node.targetLinks = [];
+});
+links.forEach(function(link) {
+var source = link.source,
+target = link.target;
+if (typeof source === "number") source = link.source = nodes[link.source];
+if (typeof target === "number") target = link.target = nodes[link.target];
+source.sourceLinks.push(link);
+target.targetLinks.push(link);
+});
+}
+
+// Compute the value (size) of each node by summing the associated links.
+function computeNodeValues() {
+nodes.forEach(function(node) {
+node.value = Math.max(
+d3.sum(node.sourceLinks, value),
+d3.sum(node.targetLinks, value)
+);
+});
+}
+
+// Iteratively assign the breadth (x-position) for each node.
+// Nodes are assigned the maximum breadth of incoming neighbors plus one;
+// nodes with no incoming links are assigned breadth zero, while
+// nodes with no outgoing links are assigned the maximum breadth.
+function computeNodeBreadths() {
+var remainingNodes = nodes,
+nextNodes,
+x = 0;
+
+while (remainingNodes.length) {
+nextNodes = [];
+remainingNodes.forEach(function(node) {
+node.x = x;
+node.dx = nodeWidth;
+node.sourceLinks.forEach(function(link) {
+nextNodes.push(link.target);
+});
+});
+remainingNodes = nextNodes;
+++x;
+}
+
+//
+moveSinksRight(x);
+scaleNodeBreadths((width - nodeWidth) / (x - 1));
+}
+
+function moveSourcesRight() {
+nodes.forEach(function(node) {
+if (!node.targetLinks.length) {
+node.x = d3.min(node.sourceLinks, function(d) { return d.target.x; }) - 1;
+}
+});
+}
+
+function moveSinksRight(x) {
+nodes.forEach(function(node) {
+if (!node.sourceLinks.length) {
+node.x = x - 1;
+}
+});
+}
+
+function scaleNodeBreadths(kx) {
+nodes.forEach(function(node) {
+node.x *= kx;
+});
+}
+
+function computeNodeDepths(iterations) {
+var nodesByBreadth = d3.nest()
+.key(function(d) { return d.x; })
+.sortKeys(d3.ascending)
+.entries(nodes)
+.map(function(d) { return d.values; });
+
+//
+initializeNodeDepth();
+resolveCollisions();
+for (var alpha = 1; iterations > 0; --iterations) {
+relaxRightToLeft(alpha *= .99);
+resolveCollisions();
+relaxLeftToRight(alpha);
+resolveCollisions();
+}
+
+function initializeNodeDepth() {
+var ky = d3.min(nodesByBreadth, function(nodes) {
+return (size[1] - (nodes.length - 1) * nodePadding) / d3.sum(nodes, value);
+});
+
+nodesByBreadth.forEach(function(nodes) {
+nodes.forEach(function(node, i) {
+node.y = i;
+node.dy = node.value * ky;
+});
+});
+
+links.forEach(function(link) {
+link.dy = link.value * ky;
+});
+}
+
+function relaxLeftToRight(alpha) {
+nodesByBreadth.forEach(function(nodes, breadth) {
+nodes.forEach(function(node) {
+if (node.targetLinks.length) {
+var y = d3.sum(node.targetLinks, weightedSource) / d3.sum(node.targetLinks, value);
+node.y += (y - center(node)) * alpha;
+}
+});
+});
+
+function weightedSource(link) {
+return center(link.source) * link.value;
+}
+}
+
+function relaxRightToLeft(alpha) {
+nodesByBreadth.slice().reverse().forEach(function(nodes) {
+nodes.forEach(function(node) {
+if (node.sourceLinks.length) {
+var y = d3.sum(node.sourceLinks, weightedTarget) / d3.sum(node.sourceLinks, value);
+node.y += (y - center(node)) * alpha;
+}
+});
+});
+
+function weightedTarget(link) {
+return center(link.target) * link.value;
+}
+}
+
+function resolveCollisions() {
+nodesByBreadth.forEach(function(nodes) {
+var node,
+dy,
+y0 = 0,
+n = nodes.length,
+i;
+
+// Push any overlapping nodes down.
+nodes.sort(ascendingDepth);
+for (i = 0; i < n; ++i) {
+node = nodes[i];
+dy = y0 - node.y;
+if (dy > 0) node.y += dy;
+y0 = node.y + node.dy + nodePadding;
+}
+
+// If the bottommost node goes outside the bounds, push it back up.
+dy = y0 - nodePadding - size[1];
+if (dy > 0) {
+y0 = node.y -= dy;
+
+// Push any overlapping nodes back up.
+for (i = n - 2; i >= 0; --i) {
+node = nodes[i];
+dy = node.y + node.dy + nodePadding - y0;
+if (dy > 0) node.y -= dy;
+y0 = node.y;
+}
+}
+});
+}
+
+function ascendingDepth(a, b) {
+return a.y - b.y;
+}
+}
+
+function computeLinkDepths() {
+nodes.forEach(function(node) {
+node.sourceLinks.sort(ascendingTargetDepth);
+node.targetLinks.sort(ascendingSourceDepth);
+});
+nodes.forEach(function(node) {
+var sy = 0, ty = 0;
+node.sourceLinks.forEach(function(link) {
+link.sy = sy;
+sy += link.dy;
+});
+node.targetLinks.forEach(function(link) {
+link.ty = ty;
+ty += link.dy;
+});
+});
+
+function ascendingSourceDepth(a, b) {
+return a.source.y - b.source.y;
+}
+
+function ascendingTargetDepth(a, b) {
+return a.target.y - b.target.y;
+}
+}
+
+function center(node) {
+return node.y + node.dy / 2;
+}
+
+function value(link) {
+return link.value;
+}
+
+return sankey;
+};
+</script>
+
+<script>
+
+ var links = [ { "source" : 0, "target" : 4, "value" : 183.413769913 }, { "source" : 0, "target" : 6, "value" : 168.112393276 }, { "source" : 1, "target" : 4, "value" : 118.461452123 }, { "source" : 0, "target" : 9, "value" : 111.576355457 }, { "source" : 2, "target" : 11, "value" : 97.208044589 }, { "source" : 3, "target" : 7, "value" : 86.711681327 }, { "source" : 3, "target" : 4, "value" : 84.781192897 }, { "source" : 0, "target" : 8, "value" : 84.225342958 }, { "source" : 0, "target" : 10, "value" : 82.588554568 }, { "source" : 1, "target" : 6, "value" : 79.072882112 }, { "source" : 4, "target" : 12, "value" : 75.336305524 }, { "source" : 5, "target" : 9, "value" : 72.438063628 }, { "source" : 6, "target" : 13, "value" : 70.18536728 }, { "source" : 3, "target" : 6, "value" : 61.376891157 }, { "source" : 4, "target" : 13, "value" : 57.780925928 }, { "source" : 5, "target" : 4, "value" : 51.957377438 }, { "source" : 1, "target" : 11, "value" : 46.639077436 }, { "source" : 7, "target" : 14, "value" : 46.316097434 }, { "source" : 3, "target" : 10, "value" : 45.880830267 }, { "source" : 8, "target" : 15, "value" : 40.092030731 }, { "source" : 9, "target" : 13, "value" : 39.922995293 }, { "source" : 6, "target" : 16, "value" : 38.707071384 }, { "source" : 10, "target" : 13, "value" : 37.599329941 }, { "source" : 5, "target" : 8, "value" : 37.129183475 }, { "source" : 4, "target" : 16, "value" : 36.696026983 }, { "source" : 5, "target" : 6, "value" : 35.807660417 }, { "source" : 4, "target" : 17, "value" : 35.770341399 }, { "source" : 3, "target" : 9, "value" : 35.127191972 }, { "source" : 1, "target" : 10, "value" : 33.818385175 }, { "source" : 6, "target" : 17, "value" : 32.251245839 }, { "source" : 8, "target" : 14, "value" : 31.27747347 }, { "source" : 2, "target" : 6, "value" : 30.86804947 }, { "source" : 6, "target" : 12, "value" : 30.69250077 }, { "source" : 1, "target" : 9, "value" : 29.60446605 }, { "source" : 3, "target" : 8, "value" : 28.112117854 }, { "source" : 6, "target" : 18, "value" : 26.706578237 }, { "source" : 5, "target" : 7, "value" : 26.651432683 }, { "source" : 8, "target" : 16, "value" : 26.61339713 }, { "source" : 2, "target" : 4, "value" : 26.346874501 }, { "source" : 8, "target" : 13, "value" : 25.642671107 }, { "source" : 3, "target" : 11, "value" : 25.494002272 }, { "source" : 6, "target" : 19, "value" : 25.413778089 }, { "source" : 9, "target" : 15, "value" : 24.32044803 }, { "source" : 10, "target" : 12, "value" : 23.791212797 }, { "source" : 9, "target" : 16, "value" : 23.649112608 }, { "source" : 0, "target" : 7, "value" : 23.459055254 }, { "source" : 8, "target" : 17, "value" : 23.086167958 }, { "source" : 6, "target" : 20, "value" : 22.031567679 }, { "source" : 6, "target" : 21, "value" : 20.419693627 }, { "source" : 9, "target" : 19, "value" : 19.453772432 }, { "source" : 11, "target" : 18, "value" : 19.351446033 }, { "source" : 4, "target" : 20, "value" : 19.214923742 }, { "source" : 7, "target" : 13, "value" : 18.559882682 }, { "source" : 10, "target" : 17, "value" : 18.272293869 }, { "source" : 4, "target" : 21, "value" : 18.193275251 }, { "source" : 10, "target" : 15, "value" : 17.769828639 }, { "source" : 5, "target" : 10, "value" : 17.36153023 }, { "source" : 10, "target" : 16, "value" : 15.867692363 }, { "source" : 8, "target" : 12, "value" : 15.674970178 }, { "source" : 10, "target" : 21, "value" : 14.984810701 }, { "source" : 10, "target" : 18, "value" : 14.415866794 }, { "source" : 9, "target" : 12, "value" : 14.338289147 }, { "source" : 4, "target" : 15, "value" : 14.208941925 }, { "source" : 6, "target" : 15, "value" : 14.164831274 }, { "source" : 2, "target" : 8, "value" : 13.620898723 }, { "source" : 9, "target" : 17, "value" : 13.468149285 }, { "source" : 2, "target" : 10, "value" : 13.406213464 }, { "source" : 11, "target" : 19, "value" : 13.240042031 }, { "source" : 4, "target" : 18, "value" : 12.155218998 }, { "source" : 4, "target" : 19, "value" : 11.599923197 }, { "source" : 1, "target" : 8, "value" : 11.592741159 }, { "source" : 9, "target" : 18, "value" : 11.552442356 }, { "source" : 10, "target" : 19, "value" : 11.035873506 }, { "source" : 9, "target" : 20, "value" : 10.975986855 }, { "source" : 9, "target" : 14, "value" : 10.733331151 }, { "source" : 1, "target" : 7, "value" : 9.968196012 }, { "source" : 8, "target" : 21, "value" : 9.947426199 }, { "source" : 2, "target" : 9, "value" : 9.868007743 }, { "source" : 8, "target" : 20, "value" : 8.78262652 }, { "source" : 8, "target" : 19, "value" : 8.591749805 }, { "source" : 9, "target" : 21, "value" : 8.159606785 }, { "source" : 7, "target" : 16, "value" : 7.851212084 }, { "source" : 2, "target" : 7, "value" : 7.780381785 }, { "source" : 10, "target" : 20, "value" : 7.731387803 }, { "source" : 11, "target" : 16, "value" : 7.196190355 }, { "source" : 8, "target" : 18, "value" : 6.966083055 }, { "source" : 7, "target" : 19, "value" : 6.097463712 }, { "source" : 7, "target" : 12, "value" : 5.815351648 }, { "source" : 7, "target" : 17, "value" : 5.750024071 }, { "source" : 7, "target" : 15, "value" : 4.795450944 }, { "source" : 6, "target" : 14, "value" : 4.794874859 }, { "source" : 11, "target" : 13, "value" : 3.736316654 }, { "source" : 7, "target" : 18, "value" : 3.522931082 }, { "source" : 7, "target" : 20, "value" : 3.507675442 }, { "source" : 11, "target" : 14, "value" : 2.78083508 }, { "source" : 4, "target" : 14, "value" : 2.486812739 }, { "source" : 11, "target" : 20, "value" : 2.46279064 }, { "source" : 10, "target" : 14, "value" : 2.277231509 }, { "source" : 0, "target" : 11, "value" : 2.214815049 }, { "source" : 11, "target" : 17, "value" : 2.068514802 }, { "source" : 7, "target" : 21, "value" : 1.569860721 }, { "source" : 11, "target" : 21, "value" : 0.97563501 }, { "source" : 11, "target" : 15, "value" : 0.469973987 }, { "source" : 5, "target" : 11, "value" : 0.252269463 } ] ; 
+ var nodes = [ { "name" : "World Bank (IBRD)" }, { "name" : "Japan" }, { "name" : "Germany" }, { "name" : "United States" }, { "name" : "Transportation" }, { "name" : "World Bank (IDA)" }, { "name" : "Energy" }, { "name" : "Health" }, { "name" : "Other" }, { "name" : "Agriculture" }, { "name" : "Industry" }, { "name" : "Debt" }, { "name" : "China" }, { "name" : "India" }, { "name" : "Bilateral, unspecified" }, { "name" : "Mexico" }, { "name" : "Indonesia" }, { "name" : "Brazil" }, { "name" : "Egypt" }, { "name" : "Pakistan" }, { "name" : "Philippines" }, { "name" : "Turkey" } ] ; 
+ var margin = {top: 1, right: 1, bottom: 6, left: 300},
+width = 950 - margin.left - margin.right,
+height = 450 - margin.top - margin.bottom;
+
+var formatNumber = d3.format(",.0f"),
+format = function(d) { return formatNumber(d); },
+color = d3.scale.category20();
+
+var svg = d3.select("body").append("svg")
+.attr("width", width + margin.left + margin.right)
+.attr("height", height + margin.top + margin.bottom)
+.append("g")
+.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var sankey = d3.sankey()
+.nodes(d3.values(nodes))
+.links(links)
+.nodeWidth(15)
+.nodePadding(25)
+.size([width, height])
+.layout(32);
+
+var path = sankey.link();
+
+var link = svg.append("g").selectAll(".link")
+.data(sankey.links())
+.enter().append("path")
+.attr("class", "link")
+.attr("d", path)
+.style("stroke-width", function(d) { return Math.max(1, d.dy); })
+.sort(function(a, b) { return b.dy - a.dy; });
+
+link.append("title")
+.text(function(d) { return d.source.name + " → " + d.target.name + "\n" + format(d.value); });
+
+var node = svg.append("g").selectAll(".node")
+.data(sankey.nodes())
+.enter().append("g")
+.attr("class", "node")
+.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+.call(d3.behavior.drag()
+.origin(function(d) { return d; })
+.on("dragstart", function() { this.parentNode.appendChild(this); })
+.on("drag", dragmove));
+
+node.append("rect")
+.attr("height", function(d) { return d.dy; })
+.attr("width", sankey.nodeWidth())
+.style("fill", function(d) { return d.color = color(d.name.replace(/ .*/, "")); })
+.style("stroke", function(d) { return d3.rgb(d.color).darker(2); })
+.append("title")
+.text(function(d) { return d.name + "\n" + format(d.value); });
+
+node.append("text")
+.attr("x", -6)
+.attr("y", function(d) { return d.dy / 2; })
+.attr("dy", ".35em")
+.attr("text-anchor", "end")
+.attr("transform", null)
+.text(function(d) { return d.name; })
+.filter(function(d) { return d.x < width / 2; })
+.attr("x", 6 + sankey.nodeWidth())
+.attr("text-anchor", "start");
+
+function dragmove(d) {
+d3.select(this).attr("transform", "translate(" + d.x + "," + (d.y = Math.max(0, Math.min(height - d.dy, d3.event.y))) + ")");
+sankey.relayout();
+link.attr("d", path);
+}
+
+</script>
 
 </div>
 
@@ -316,20 +701,403 @@ div#notebook {
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt"></div>
+<style>
+#body {
+height: 35px;
+}
+.node rect {
+cursor: move;
+fill-opacity: .9;
+shape-rendering: crispEdges;
+}
+.node text {
+font: 12px serif;
+pointer-events: none;
+text-shadow: 0 1px 0 #fff;
+}
+.link {
+fill: none;
+stroke: #000;
+stroke-opacity: .2;
+}
+.link:hover {
+stroke-opacity: .5;
+}
+</style>
 
-<div class="output_html rendered_html output_subarea output_execute_result">
+<p id="body"></p>
 
-        <iframe
-            width="880"
-            height="550"
-            src="sankey_aid_data_nep_2016.html?lineheight=0&display=block&scroll=False"
-            frameborder="0"
-            align="right"
-            allowfullscreen
-        ></iframe>
-        
-</div>
+<script src=http://d3js.org/d3.v3.min.js></script>
+ <script>
+d3.sankey = function() {
+var sankey = {},
+nodeWidth = 24,
+nodePadding = 8,
+size = [1, 1],
+nodes = [],
+links = [];
+
+sankey.nodeWidth = function(_) {
+if (!arguments.length) return nodeWidth;
+nodeWidth = +_;
+return sankey;
+};
+
+sankey.nodePadding = function(_) {
+if (!arguments.length) return nodePadding;
+nodePadding = +_;
+return sankey;
+};
+
+sankey.nodes = function(_) {
+if (!arguments.length) return nodes;
+nodes = _;
+return sankey;
+};
+
+sankey.links = function(_) {
+if (!arguments.length) return links;
+links = _;
+return sankey;
+};
+
+sankey.size = function(_) {
+if (!arguments.length) return size;
+size = _;
+return sankey;
+};
+
+sankey.layout = function(iterations) {
+computeNodeLinks();
+computeNodeValues();
+computeNodeBreadths();
+computeNodeDepths(iterations);
+computeLinkDepths();
+return sankey;
+};
+
+sankey.relayout = function() {
+computeLinkDepths();
+return sankey;
+};
+
+sankey.link = function() {
+var curvature = .5;
+
+function link(d) {
+var x0 = d.source.x + d.source.dx,
+x1 = d.target.x,
+xi = d3.interpolateNumber(x0, x1),
+x2 = xi(curvature),
+x3 = xi(1 - curvature),
+y0 = d.source.y + d.sy + d.dy / 2,
+y1 = d.target.y + d.ty + d.dy / 2;
+return "M" + x0 + "," + y0
++ "C" + x2 + "," + y0
++ " " + x3 + "," + y1
++ " " + x1 + "," + y1;
+}
+
+link.curvature = function(_) {
+if (!arguments.length) return curvature;
+curvature = +_;
+return link;
+};
+
+return link;
+};
+
+// Populate the sourceLinks and targetLinks for each node.
+// Also, if the source and target are not objects, assume they are indices.
+function computeNodeLinks() {
+nodes.forEach(function(node) {
+node.sourceLinks = [];
+node.targetLinks = [];
+});
+links.forEach(function(link) {
+var source = link.source,
+target = link.target;
+if (typeof source === "number") source = link.source = nodes[link.source];
+if (typeof target === "number") target = link.target = nodes[link.target];
+source.sourceLinks.push(link);
+target.targetLinks.push(link);
+});
+}
+
+// Compute the value (size) of each node by summing the associated links.
+function computeNodeValues() {
+nodes.forEach(function(node) {
+node.value = Math.max(
+d3.sum(node.sourceLinks, value),
+d3.sum(node.targetLinks, value)
+);
+});
+}
+
+// Iteratively assign the breadth (x-position) for each node.
+// Nodes are assigned the maximum breadth of incoming neighbors plus one;
+// nodes with no incoming links are assigned breadth zero, while
+// nodes with no outgoing links are assigned the maximum breadth.
+function computeNodeBreadths() {
+var remainingNodes = nodes,
+nextNodes,
+x = 0;
+
+while (remainingNodes.length) {
+nextNodes = [];
+remainingNodes.forEach(function(node) {
+node.x = x;
+node.dx = nodeWidth;
+node.sourceLinks.forEach(function(link) {
+nextNodes.push(link.target);
+});
+});
+remainingNodes = nextNodes;
+++x;
+}
+
+//
+moveSinksRight(x);
+scaleNodeBreadths((width - nodeWidth) / (x - 1));
+}
+
+function moveSourcesRight() {
+nodes.forEach(function(node) {
+if (!node.targetLinks.length) {
+node.x = d3.min(node.sourceLinks, function(d) { return d.target.x; }) - 1;
+}
+});
+}
+
+function moveSinksRight(x) {
+nodes.forEach(function(node) {
+if (!node.sourceLinks.length) {
+node.x = x - 1;
+}
+});
+}
+
+function scaleNodeBreadths(kx) {
+nodes.forEach(function(node) {
+node.x *= kx;
+});
+}
+
+function computeNodeDepths(iterations) {
+var nodesByBreadth = d3.nest()
+.key(function(d) { return d.x; })
+.sortKeys(d3.ascending)
+.entries(nodes)
+.map(function(d) { return d.values; });
+
+//
+initializeNodeDepth();
+resolveCollisions();
+for (var alpha = 1; iterations > 0; --iterations) {
+relaxRightToLeft(alpha *= .99);
+resolveCollisions();
+relaxLeftToRight(alpha);
+resolveCollisions();
+}
+
+function initializeNodeDepth() {
+var ky = d3.min(nodesByBreadth, function(nodes) {
+return (size[1] - (nodes.length - 1) * nodePadding) / d3.sum(nodes, value);
+});
+
+nodesByBreadth.forEach(function(nodes) {
+nodes.forEach(function(node, i) {
+node.y = i;
+node.dy = node.value * ky;
+});
+});
+
+links.forEach(function(link) {
+link.dy = link.value * ky;
+});
+}
+
+function relaxLeftToRight(alpha) {
+nodesByBreadth.forEach(function(nodes, breadth) {
+nodes.forEach(function(node) {
+if (node.targetLinks.length) {
+var y = d3.sum(node.targetLinks, weightedSource) / d3.sum(node.targetLinks, value);
+node.y += (y - center(node)) * alpha;
+}
+});
+});
+
+function weightedSource(link) {
+return center(link.source) * link.value;
+}
+}
+
+function relaxRightToLeft(alpha) {
+nodesByBreadth.slice().reverse().forEach(function(nodes) {
+nodes.forEach(function(node) {
+if (node.sourceLinks.length) {
+var y = d3.sum(node.sourceLinks, weightedTarget) / d3.sum(node.sourceLinks, value);
+node.y += (y - center(node)) * alpha;
+}
+});
+});
+
+function weightedTarget(link) {
+return center(link.target) * link.value;
+}
+}
+
+function resolveCollisions() {
+nodesByBreadth.forEach(function(nodes) {
+var node,
+dy,
+y0 = 0,
+n = nodes.length,
+i;
+
+// Push any overlapping nodes down.
+nodes.sort(ascendingDepth);
+for (i = 0; i < n; ++i) {
+node = nodes[i];
+dy = y0 - node.y;
+if (dy > 0) node.y += dy;
+y0 = node.y + node.dy + nodePadding;
+}
+
+// If the bottommost node goes outside the bounds, push it back up.
+dy = y0 - nodePadding - size[1];
+if (dy > 0) {
+y0 = node.y -= dy;
+
+// Push any overlapping nodes back up.
+for (i = n - 2; i >= 0; --i) {
+node = nodes[i];
+dy = node.y + node.dy + nodePadding - y0;
+if (dy > 0) node.y -= dy;
+y0 = node.y;
+}
+}
+});
+}
+
+function ascendingDepth(a, b) {
+return a.y - b.y;
+}
+}
+
+function computeLinkDepths() {
+nodes.forEach(function(node) {
+node.sourceLinks.sort(ascendingTargetDepth);
+node.targetLinks.sort(ascendingSourceDepth);
+});
+nodes.forEach(function(node) {
+var sy = 0, ty = 0;
+node.sourceLinks.forEach(function(link) {
+link.sy = sy;
+sy += link.dy;
+});
+node.targetLinks.forEach(function(link) {
+link.ty = ty;
+ty += link.dy;
+});
+});
+
+function ascendingSourceDepth(a, b) {
+return a.source.y - b.source.y;
+}
+
+function ascendingTargetDepth(a, b) {
+return a.target.y - b.target.y;
+}
+}
+
+function center(node) {
+return node.y + node.dy / 2;
+}
+
+function value(link) {
+return link.value;
+}
+
+return sankey;
+};
+</script>
+
+<script>
+
+ var links = [ { "source" : 0, "target" : 30, "value" : 7441.038574 }, { "source" : 1, "target" : 30, "value" : 6676.470994 }, { "source" : 2, "target" : 30, "value" : 5201.373759 }, { "source" : 3, "target" : 0, "value" : 4612.326194 }, { "source" : 1, "target" : 31, "value" : 4533.657708 }, { "source" : 4, "target" : 30, "value" : 4375.770723 }, { "source" : 0, "target" : 31, "value" : 4156.049617 }, { "source" : 5, "target" : 30, "value" : 4139.800292 }, { "source" : 6, "target" : 30, "value" : 4132.092703 }, { "source" : 2, "target" : 31, "value" : 4004.885015 }, { "source" : 7, "target" : 6, "value" : 3455.437662 }, { "source" : 3, "target" : 1, "value" : 2699.728486 }, { "source" : 8, "target" : 31, "value" : 2672.589838 }, { "source" : 9, "target" : 2, "value" : 2341.820687 }, { "source" : 10, "target" : 30, "value" : 2320.57781 }, { "source" : 5, "target" : 31, "value" : 2232.796105 }, { "source" : 8, "target" : 30, "value" : 2187.87924 }, { "source" : 11, "target" : 2, "value" : 2176.081859 }, { "source" : 12, "target" : 31, "value" : 2045.292104 }, { "source" : 4, "target" : 31, "value" : 1723.103074 }, { "source" : 12, "target" : 30, "value" : 1597.523728 }, { "source" : 3, "target" : 4, "value" : 1546.911809 }, { "source" : 9, "target" : 0, "value" : 1544.327881 }, { "source" : 9, "target" : 1, "value" : 1520.586755 }, { "source" : 11, "target" : 5, "value" : 1441.584081 }, { "source" : 13, "target" : 0, "value" : 1310.715224 }, { "source" : 9, "target" : 8, "value" : 1307.088902 }, { "source" : 3, "target" : 2, "value" : 1225.109649 }, { "source" : 14, "target" : 30, "value" : 1216.694387 }, { "source" : 15, "target" : 1, "value" : 1208.048574 }, { "source" : 11, "target" : 0, "value" : 1175.606112 }, { "source" : 9, "target" : 5, "value" : 1136.421752 }, { "source" : 14, "target" : 31, "value" : 1127.116875 }, { "source" : 11, "target" : 1, "value" : 980.227367 }, { "source" : 13, "target" : 1, "value" : 962.354672 }, { "source" : 6, "target" : 31, "value" : 886.301804 }, { "source" : 10, "target" : 31, "value" : 885.616363 }, { "source" : 11, "target" : 4, "value" : 857.825133 }, { "source" : 16, "target" : 0, "value" : 854.533316 }, { "source" : 16, "target" : 1, "value" : 760.202434 }, { "source" : 9, "target" : 10, "value" : 731.679219 }, { "source" : 9, "target" : 12, "value" : 729.09128 }, { "source" : 9, "target" : 4, "value" : 724.583201 }, { "source" : 11, "target" : 8, "value" : 703.758059 }, { "source" : 13, "target" : 4, "value" : 665.696995 }, { "source" : 11, "target" : 10, "value" : 648.592365 }, { "source" : 17, "target" : 12, "value" : 629.123294 }, { "source" : 13, "target" : 5, "value" : 623.989695 }, { "source" : 3, "target" : 10, "value" : 621.504092 }, { "source" : 3, "target" : 12, "value" : 595.697717 }, { "source" : 18, "target" : 1, "value" : 589.663236 }, { "source" : 17, "target" : 2, "value" : 581.743494 }, { "source" : 9, "target" : 6, "value" : 502.601655 }, { "source" : 19, "target" : 5, "value" : 491.09398 }, { "source" : 20, "target" : 1, "value" : 488.222865 }, { "source" : 21, "target" : 2, "value" : 468.714481 }, { "source" : 13, "target" : 6, "value" : 444.975222 }, { "source" : 22, "target" : 0, "value" : 410.340585 }, { "source" : 3, "target" : 8, "value" : 407.743861 }, { "source" : 17, "target" : 4, "value" : 400.479618 }, { "source" : 9, "target" : 14, "value" : 393.101652 }, { "source" : 3, "target" : 5, "value" : 347.601679 }, { "source" : 13, "target" : 2, "value" : 344.721003 }, { "source" : 16, "target" : 12, "value" : 330.942977 }, { "source" : 23, "target" : 5, "value" : 330.555963 }, { "source" : 24, "target" : 8, "value" : 314.66368 }, { "source" : 15, "target" : 4, "value" : 309.240963 }, { "source" : 25, "target" : 1, "value" : 292.921946 }, { "source" : 3, "target" : 6, "value" : 291.958948 }, { "source" : 17, "target" : 14, "value" : 289.783359 }, { "source" : 25, "target" : 2, "value" : 287.633443 }, { "source" : 19, "target" : 0, "value" : 283.178195 }, { "source" : 23, "target" : 8, "value" : 261.823669 }, { "source" : 23, "target" : 1, "value" : 259.365228 }, { "source" : 16, "target" : 2, "value" : 256.1521 }, { "source" : 15, "target" : 10, "value" : 240.913733 }, { "source" : 24, "target" : 5, "value" : 238.937382 }, { "source" : 22, "target" : 2, "value" : 224.514014 }, { "source" : 26, "target" : 2, "value" : 219.900277 }, { "source" : 26, "target" : 5, "value" : 215.768913 }, { "source" : 13, "target" : 8, "value" : 204.986002 }, { "source" : 15, "target" : 8, "value" : 198.065288 }, { "source" : 18, "target" : 2, "value" : 196.206179 }, { "source" : 23, "target" : 14, "value" : 196.029654 }, { "source" : 27, "target" : 4, "value" : 193.020592 }, { "source" : 20, "target" : 8, "value" : 190.19521 }, { "source" : 28, "target" : 8, "value" : 187.089302 }, { "source" : 16, "target" : 14, "value" : 181.726878 }, { "source" : 11, "target" : 14, "value" : 181.28628 }, { "source" : 24, "target" : 10, "value" : 180.70131 }, { "source" : 25, "target" : 5, "value" : 178.840206 }, { "source" : 17, "target" : 5, "value" : 174.288147 }, { "source" : 27, "target" : 8, "value" : 173.281895 }, { "source" : 15, "target" : 5, "value" : 160.131232 }, { "source" : 25, "target" : 14, "value" : 159.41084 }, { "source" : 17, "target" : 1, "value" : 156.964058 }, { "source" : 16, "target" : 5, "value" : 155.196765 }, { "source" : 22, "target" : 5, "value" : 152.928465 }, { "source" : 15, "target" : 12, "value" : 149.489427 }, { "source" : 17, "target" : 0, "value" : 143.387204 }, { "source" : 24, "target" : 2, "value" : 142.823738 }, { "source" : 15, "target" : 2, "value" : 140.543733 }, { "source" : 20, "target" : 5, "value" : 139.826723 }, { "source" : 22, "target" : 8, "value" : 139.735322 }, { "source" : 29, "target" : 14, "value" : 131.737401 }, { "source" : 21, "target" : 5, "value" : 126.37411 }, { "source" : 29, "target" : 4, "value" : 125.82599 }, { "source" : 29, "target" : 2, "value" : 124.082119 }, { "source" : 29, "target" : 1, "value" : 120.616781 }, { "source" : 23, "target" : 12, "value" : 119.661394 }, { "source" : 18, "target" : 5, "value" : 115.592817 }, { "source" : 27, "target" : 14, "value" : 106.42452 }, { "source" : 16, "target" : 8, "value" : 103.487182 }, { "source" : 17, "target" : 10, "value" : 102.998277 }, { "source" : 26, "target" : 10, "value" : 100.808047 }, { "source" : 23, "target" : 4, "value" : 99.77086 }, { "source" : 13, "target" : 14, "value" : 99.104719 }, { "source" : 18, "target" : 0, "value" : 98.189475 }, { "source" : 15, "target" : 0, "value" : 95.859246 }, { "source" : 29, "target" : 0, "value" : 94.849273 }, { "source" : 23, "target" : 10, "value" : 92.620533 }, { "source" : 25, "target" : 10, "value" : 90.862771 }, { "source" : 20, "target" : 4, "value" : 88.670665 }, { "source" : 28, "target" : 12, "value" : 85.66934 }, { "source" : 25, "target" : 6, "value" : 83.256422 }, { "source" : 27, "target" : 2, "value" : 83.144768 }, { "source" : 25, "target" : 0, "value" : 82.560378 }, { "source" : 17, "target" : 8, "value" : 81.998776 }, { "source" : 26, "target" : 0, "value" : 80.601356 }, { "source" : 22, "target" : 14, "value" : 79.441158 }, { "source" : 28, "target" : 2, "value" : 79.332568 }, { "source" : 13, "target" : 10, "value" : 76.400537 }, { "source" : 27, "target" : 1, "value" : 76.275762 }, { "source" : 28, "target" : 5, "value" : 74.704601 }, { "source" : 16, "target" : 4, "value" : 69.073034 }, { "source" : 26, "target" : 12, "value" : 68.757267 }, { "source" : 25, "target" : 8, "value" : 68.189119 }, { "source" : 24, "target" : 14, "value" : 65.950524 }, { "source" : 27, "target" : 10, "value" : 65.168057 }, { "source" : 11, "target" : 12, "value" : 63.622724 }, { "source" : 27, "target" : 6, "value" : 63.538293 }, { "source" : 25, "target" : 12, "value" : 61.426795 }, { "source" : 27, "target" : 5, "value" : 56.903299 }, { "source" : 15, "target" : 14, "value" : 52.877297 }, { "source" : 3, "target" : 14, "value" : 52.452767 }, { "source" : 18, "target" : 14, "value" : 52.248591 }, { "source" : 20, "target" : 14, "value" : 50.034347 }, { "source" : 28, "target" : 6, "value" : 43.500449 }, { "source" : 27, "target" : 0, "value" : 43.407621 }, { "source" : 29, "target" : 12, "value" : 42.748023 }, { "source" : 16, "target" : 6, "value" : 40.781618 }, { "source" : 23, "target" : 2, "value" : 40.205978 }, { "source" : 22, "target" : 12, "value" : 40.048595 }, { "source" : 28, "target" : 14, "value" : 38.066575 }, { "source" : 22, "target" : 4, "value" : 37.3333 }, { "source" : 26, "target" : 14, "value" : 34.647308 }, { "source" : 24, "target" : 4, "value" : 33.206532 }, { "source" : 20, "target" : 12, "value" : 32.411979 }, { "source" : 26, "target" : 1, "value" : 32.114999 }, { "source" : 28, "target" : 4, "value" : 31.66218 }, { "source" : 20, "target" : 0, "value" : 31.248766 }, { "source" : 28, "target" : 0, "value" : 28.645924 }, { "source" : 25, "target" : 4, "value" : 27.721868 }, { "source" : 19, "target" : 12, "value" : 25.632481 }, { "source" : 26, "target" : 8, "value" : 25.476483 }, { "source" : 24, "target" : 1, "value" : 24.191763 }, { "source" : 24, "target" : 0, "value" : 23.590342 }, { "source" : 26, "target" : 4, "value" : 21.682697 }, { "source" : 22, "target" : 1, "value" : 20.524019 }, { "source" : 22, "target" : 10, "value" : 19.230633 }, { "source" : 19, "target" : 8, "value" : 18.23361 }, { "source" : 11, "target" : 6, "value" : 17.41155 }, { "source" : 28, "target" : 10, "value" : 17.372875 }, { "source" : 19, "target" : 14, "value" : 16.654921 }, { "source" : 24, "target" : 12, "value" : 12.679173 }, { "source" : 27, "target" : 12, "value" : 11.993322 }, { "source" : 15, "target" : 6, "value" : 11.931544 }, { "source" : 20, "target" : 10, "value" : 11.220401 }, { "source" : 20, "target" : 2, "value" : 11.098603 } ] ; 
+ var nodes = [ { "name" : "Transportation" }, { "name" : "Energy" }, { "name" : "Agriculture" }, { "name" : "Japan" }, { "name" : "Water" }, { "name" : "Other" }, { "name" : "Budget" }, { "name" : "International Monetary Fund (IMF)" }, { "name" : "Education" }, { "name" : "World Bank (IDA)" }, { "name" : "Industry" }, { "name" : "Asian Development Fund (ASDF)" }, { "name" : "Health" }, { "name" : "Asian Development Bank (ASDB)" }, { "name" : "Government" }, { "name" : "Germany" }, { "name" : "United Kingdom" }, { "name" : "United States" }, { "name" : "World Bank (IBRD)" }, { "name" : "India" }, { "name" : "Sweden" }, { "name" : "International Fund for Agricultural Development (IFAD)" }, { "name" : "Switzerland" }, { "name" : "Norway" }, { "name" : "European Communities (EC)" }, { "name" : "Canada" }, { "name" : "Netherlands" }, { "name" : "Denmark" }, { "name" : "Australia" }, { "name" : "Saudi Arabia" }, { "name" : "Sri Lanka" }, { "name" : "Nepal" } ] ; 
+ var margin = {top: 1, right: 1, bottom: 6, left: 300},
+width = 950 - margin.left - margin.right,
+height = 450 - margin.top - margin.bottom;
+
+var formatNumber = d3.format(",.0f"),
+format = function(d) { return formatNumber(d); },
+color = d3.scale.category20();
+
+var svg = d3.select("body").append("svg")
+.attr("width", width + margin.left + margin.right)
+.attr("height", height + margin.top + margin.bottom)
+.append("g")
+.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var sankey = d3.sankey()
+.nodes(d3.values(nodes))
+.links(links)
+.nodeWidth(15)
+.nodePadding(10)
+.size([width, height])
+.layout(32);
+
+var path = sankey.link();
+
+var link = svg.append("g").selectAll(".link")
+.data(sankey.links())
+.enter().append("path")
+.attr("class", "link")
+.attr("d", path)
+.style("stroke-width", function(d) { return Math.max(1, d.dy); })
+.sort(function(a, b) { return b.dy - a.dy; });
+
+link.append("title")
+.text(function(d) { return d.source.name + " → " + d.target.name + "\n" + format(d.value); });
+
+var node = svg.append("g").selectAll(".node")
+.data(sankey.nodes())
+.enter().append("g")
+.attr("class", "node")
+.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+.call(d3.behavior.drag()
+.origin(function(d) { return d; })
+.on("dragstart", function() { this.parentNode.appendChild(this); })
+.on("drag", dragmove));
+
+node.append("rect")
+.attr("height", function(d) { return d.dy; })
+.attr("width", sankey.nodeWidth())
+.style("fill", function(d) { return d.color = color(d.name.replace(/ .*/, "")); })
+.style("stroke", function(d) { return d3.rgb(d.color).darker(2); })
+.append("title")
+.text(function(d) { return d.name + "\n" + format(d.value); });
+
+node.append("text")
+.attr("x", -6)
+.attr("y", function(d) { return d.dy / 2; })
+.attr("dy", ".35em")
+.attr("text-anchor", "end")
+.attr("transform", null)
+.text(function(d) { return d.name; })
+.filter(function(d) { return d.x < width / 2; })
+.attr("x", 6 + sankey.nodeWidth())
+.attr("text-anchor", "start");
+
+function dragmove(d) {
+d3.select(this).attr("transform", "translate(" + d.x + "," + (d.y = Math.max(0, Math.min(height - d.dy, d3.event.y))) + ")");
+sankey.relayout();
+link.attr("d", path);
+}
+
+</script>
 
 </div>
 
