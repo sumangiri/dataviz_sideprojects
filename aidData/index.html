@@ -143,6 +143,50 @@ div#notebook {
 }
 </style>
 
+<style type="text/css">
+
+ .vimeo-wrapper {
+        max-width: 1280px;
+        position: relative;
+        padding-left: 120px;
+    }
+
+    .vimeo-standard {
+        float: left;
+        height: 550px;
+        width: 47%;
+        border: 0px solid #000;
+        margin: 10px;
+    }
+
+    iframe {
+        width: 100%;
+        height: 100%;
+    }
+
+
+    @media (max-width:767px) {
+
+        .vimeo-standard {
+            float: right;
+            width: 80%;
+            padding-bottom: 0px;
+        }
+    }
+
+    .clearfix:before,
+    .clearfix:after {
+        content: " "; /* 1 */
+        display: inline-block; /* 2 */
+    }
+
+    .clearfix:after {
+        clear: both;
+    }
+
+
+</style>
+
 <!-- Custom stylesheet, it must be in the same directory as the html file -->
 <link rel="stylesheet" href="custom.css">
 
@@ -267,37 +311,27 @@ div#notebook {
 
 </div>
 
-
-<div class="box" style="float:left;margin-left:20px;display:inline-block;position: relative;margin-top: 80px; margin-bottom: 0px">
-
-        <iframe
-            width="600px"
-            height="510px"
-            src="sankey_aid_data_2016.html"
-            float="left"
-            frameborder="0"
-            style="padding-left:80px;"
-            style="display:inline"
-            allowfullscreen
-            
-        ></iframe> </div>	
-
-<div class="box" style="display:inline-block;position: relative;">
-
-        <iframe
-            width="640"
-            height="520"
-            float="right"
-            src="sankey_aid_data_nep_2016.html"
-            frameborder="0"
-            style="display:inline"
-
-            allowfullscreen
-        ></iframe>
-        
+<div class="vimeo-wrapper clearfix">
+        <div class="vimeo-video-1 vimeo-standard">
+            <iframe 
+            src="sankey_aid_data_2016.html" 
+            frameborder="0" 
+            webkitallowfullscreen mozallowfullscreen allowfullscreen 
+            align="left" 
+            seamless>
+            </iframe>
+        </div>
+        <div class="vimeo-video-2 vimeo-standard">
+            <iframe src="sankey_aid_data_nep_2016.html" 
+            frameborder="0" 
+            webkitallowfullscreen mozallowfullscreen allowfullscreen 
+            align="right" 
+            seamless>
+            </iframe>
+        </div>
 </div>
 
-</div>
+
 
 </div>
 </div>
@@ -404,43 +438,29 @@ div#notebook {
 </div>
 </div>
 
-
-<div class="box" style="float:left;margin-left:20px;display:inline-block;position: relative;margin-top: 28px">
-
-        <iframe
-            width="620"
-            height="580"
-            src="treemap_dis_pc.html"
-            float="left"
-            frameborder="0"
-            
-            style="padding-left:50px;"
-            marginheight="0"
-
-            style="display:inline"
-            allowfullscreen
-        ></iframe> </div>
-        
-<div class="box" style="display:inline-block;position: relative;">
-
-        <iframe
-            width="620"
-            height="530"
-            src="treemap_com_dis.html"
-            frameborder="0"
-            style="padding:0px;"
-            style="padding-bottom: 0px"
-            allowfullscreen
-        ></iframe>
-        
+<div class="vimeo-wrapper clearfix">
+        <div class="vimeo-video-1 vimeo-standard">
+            <iframe 
+            src="treemap_dis_pc.html" 
+            frameborder="0" 
+            webkitallowfullscreen mozallowfullscreen allowfullscreen 
+            align="left" 
+            seamless>
+            </iframe>
+        </div>
+        <div class="vimeo-video-2 vimeo-standard">
+            <iframe 
+            src="treemap_com_dis.html" 
+            frameborder="0" 
+            webkitallowfullscreen mozallowfullscreen allowfullscreen 
+            align="right" 
+            seamless>
+            </iframe>
+        </div>
 </div>
 
-</div>
+     
 
-</div>
-</div>
-
-</div>
 <div class="cell border-box-sizing text_cell rendered">
 <div class="prompt input_prompt">
 </div>
